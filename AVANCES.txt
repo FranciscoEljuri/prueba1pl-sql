@@ -1,0 +1,111 @@
+DECLARE 
+    V_MIN   VENDEDOR.VENDEDOR_ID%TYPE;
+    V_MAX   VENDEDOR.VENDEDOR_ID%TYPE;
+    
+    V_NOMBRE_VENDEDOR   VENDEDOR.VENDEDOR_NOMBRE%TYPE;
+    
+    V_CANTIDAD_VENTAS   NUMBER;
+    
+    V_SUCURSAL_ID   VENDEDOR.FK_SUCURSAL_ID%TYPE;
+    V_NOMBRE_SUCURSAL   SUCURSAL.SUCURSAL_NOMBRE%TYPE;
+    V_NOMBRE_ZONA   ZONA_SUCURSAL.DESCRIPCION%TYPE;
+    
+    V_SUELDO_VENDEDOR   VENDEDOR.SUELDO_BRUTO%TYPE;
+    
+    V_VENTAS_NETAS  NUMBER;
+    V_VENTA_ID      VENTA.VENTA_ID%TYPE;
+
+BEGIN 
+
+    SELECT MIN(VENDEDOR_ID),
+            MAX(VENDEDOR_ID)
+    INTO    V_MIN,
+            V_MAX
+    FROM VENDEDOR;
+    
+    WHILE V_MIN <= V_MAX LOOP
+    -----------------------------------
+        SELECT VENDEDOR_NOMBRE,
+                FK_SUCURSAL_ID,
+                V_SUELDO_VENDEDOR
+        INTO   V_NOMBRE_VENDEDOR,
+                V_SUCURSAL_ID,
+                V_SUELDO_VENDEDOR
+        FROM VENDEDOR
+        WHERE VENDEDOR_ID = V_MIN
+        ;
+    -----------------------------------
+        SELECT COUNT(VENTA_ID)
+        INTO    V_CANTIDAD_VENTAS
+        FROM VENTA
+        WHERE FK_VENDEDOR_ID = V_MIN
+        ;
+        
+        SELECT VENTA_ID
+        INTO V_VENTA_ID
+        FROM    VENTA
+        WHERE FK_VENDEDOR_ID = V_MIN
+        ;
+    -----------------------------------
+        SELECT ZS.DESCRIPCION,
+                SC.SUCURSAL_NOMBRE
+        INTO    V_NOMBRE_ZONA,
+                V_NOMBRE_SUCURSAL
+        FROM SUCURSAL SC LEFT JOIN ZONA_SUCURSAL ZS ON(SC.ZONA_ID = ZS.CODIGO)
+        WHERE SC.SUCURSAL_ID = V_SUCURSAL_ID
+        ;
+     ----------------------------------
+
+         SELECT COUNT(DT.FK_PROPIEDAD_ID) * pp.propiedad_precio
+         INTO    V_VENTAS_NETAS
+        FROM DETALLE_VENTA DT LEFT JOIN PROPIEDAD PP ON (DT.FK_PROPIEDAD_ID = PP.PROPIEDAD_ID)
+            LEFT JOIN VENTA VT ON (DT.FK_VENTA_ID = VT.VENTA_ID)
+            WHERE DT.FK_VENTA_ID = V_VENTA_ID
+        GROUP BY pp.propiedad_precio, vt.FK_VENDEDOR_ID
+        ;
+                
+               
+     
+        DBMS_OUTPUT.PUT_LINE(V_MIN||' | '||V_NOMBRE_VENDEDOR||' | '||V_CANTIDAD_VENTAS||' | '||V_NOMBRE_SUCURSAL||' | '||V_NOMBRE_ZONA||' | '||V_SUELDO_VENDEDOR||' | '||V_VENTAS_NETAS);
+        
+        V_MIN:= V_MIN + 1;
+    END LOOP;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('TENEMOS UN PROBLEMA HOUSTON');
+         DBMS_OUTPUT.PUT_LINE('SE HA PRODUCIDO UN ERROR: '||V_MIN);
+                DBMS_OUTPUT.PUT_LINE('USUARIO: '||USER);
+                DBMS_OUTPUT.PUT_LINE('MOTIVO: '||SYSDATE);
+                DBMS_OUTPUT.PUT_LINE(' '); 
+     
+END
+;
+
+        
+        SELECT 
+        SUM(COUNT(DT.FK_PROPIEDAD_ID) * pp.propiedad_precio)
+        FROM DETALLE_VENTA DT LEFT JOIN PROPIEDAD PP ON (DT.FK_PROPIEDAD_ID = PP.PROPIEDAD_ID)
+        GROUP BY DT.FK_VENTA_ID, pp.propiedad_precio
+        ORDER BY 1 ASC
+        ;
+        
+        
+           SELECT vt.FK_VENDEDOR_ID,VT.VENTA_ID,
+           (COUNT(DT.FK_PROPIEDAD_ID) * pp.propiedad_precio)
+        FROM DETALLE_VENTA DT LEFT JOIN PROPIEDAD PP ON (DT.FK_PROPIEDAD_ID = PP.PROPIEDAD_ID)
+            LEFT JOIN VENTA VT ON (DT.FK_VENTA_ID = VT.VENTA_ID)
+        GROUP BY VT.VENTA_ID, pp.propiedad_precio, vt.FK_VENDEDOR_ID
+        ;
+        
+        SELECT vt.FK_VENDEDOR_ID, COUNT(DT.FK_PROPIEDAD_ID) * pp.propiedad_precio
+FROM DETALLE_VENTA DT 
+LEFT JOIN PROPIEDAD PP ON (DT.FK_PROPIEDAD_ID = PP.PROPIEDAD_ID)
+LEFT JOIN VENTA VT ON (DT.FK_VENTA_ID = VT.VENTA_ID)
+GROUP BY vt.FK_VENDEDOR_ID, pp.propiedad_precio;
+
+SELECT  vt.FK_VENDEDOR_ID, (COUNT(DT.FK_PROPIEDAD_ID) * pp.propiedad_precio)
+FROM DETALLE_VENTA DT 
+LEFT JOIN PROPIEDAD PP ON (DT.FK_PROPIEDAD_ID = PP.PROPIEDAD_ID)
+LEFT JOIN VENTA VT ON (DT.FK_VENTA_ID = VT.VENTA_ID)
+GROUP BY pp.propiedad_precio, vt.FK_VENDEDOR_ID;
